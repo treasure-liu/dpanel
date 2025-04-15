@@ -44,6 +44,55 @@ docker run -it -d --name dpanel --restart=always \
  dpanel/dpanel:lite
 ```
 
+#### Container Alerts
+
+DPanel supports container status alert notifications to monitor abnormal container exits, OOM, health check failures, etc., and send alerts via DingTalk bot.
+
+##### DingTalk Alert Configuration
+
+```
+docker run -it -d --name dpanel --restart=always \
+ -p 8807:8080 -e APP_NAME=dpanel \
+ -e DINGTALK_ENABLED=true \
+ -e DINGTALK_WEBHOOK_URL="https://oapi.dingtalk.com/robot/send?access_token=xxxx" \
+ -e DINGTALK_SECRET="SEC000xxxxx" \
+ -v /var/run/docker.sock:/var/run/docker.sock -v dpanel:/dpanel \
+ dpanel/dpanel:lite
+```
+
+##### Container Alert Configuration
+
+```
+docker run -it -d --name dpanel --restart=always \
+ -p 8807:8080 -e APP_NAME=dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e CONTAINER_ALERT_MONITOR="mysql,nginx,app" \
+ -e CONTAINER_ALERT_EXCLUDE="temp,test" \
+ -e CONTAINER_ALERT_ON_STOP=false \
+ -e CONTAINER_ALERT_ON_DIE=true \
+ -e CONTAINER_ALERT_ON_OOM=true \
+ -e CONTAINER_ALERT_ON_HEALTH=true \
+ -e CONTAINER_ALERT_INTERVAL=60 \
+ -v /var/run/docker.sock:/var/run/docker.sock -v dpanel:/dpanel \
+ dpanel/dpanel:lite
+```
+
+#### Alert Configuration Parameters
+
+| Environment Variable | Description | Default |
+| --- | --- | --- |
+| DINGTALK_ENABLED | Enable DingTalk alerts | false |
+| DINGTALK_WEBHOOK_URL | DingTalk robot webhook URL | "" |
+| DINGTALK_SECRET | DingTalk robot security signature key | "" |
+| CONTAINER_ALERT_ENABLED | Enable container alerts | false |
+| CONTAINER_ALERT_MONITOR | Container names to monitor (comma-separated, empty for all) | "" |
+| CONTAINER_ALERT_EXCLUDE | Container names to exclude (comma-separated) | "" |
+| CONTAINER_ALERT_ON_STOP | Alert when container stops | false |
+| CONTAINER_ALERT_ON_DIE | Alert when container exits abnormally | true |
+| CONTAINER_ALERT_ON_OOM | Alert when container OOMs | true |
+| CONTAINER_ALERT_ON_HEALTH | Alert when container health check fails | true |
+| CONTAINER_ALERT_INTERVAL | Health check interval (seconds) | 60 |
+
 #### Install Script 
 
 > Tested on Debian and Alpine.

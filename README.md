@@ -65,6 +65,55 @@ docker run -d --name dpanel --restart=always \
  dpanel/dpanel:lite
 ```
 
+#### 容器告警通知
+
+DPanel 支持容器状态告警通知功能，可以监控容器的异常退出、OOM、健康检查失败等情况，并通过钉钉机器人发送告警通知。
+
+##### 钉钉告警配置
+
+```
+docker run -d --name dpanel --restart=always \
+ -p 8807:8080 -e APP_NAME=dpanel \
+ -e DINGTALK_ENABLED=true \
+ -e DINGTALK_WEBHOOK_URL="https://oapi.dingtalk.com/robot/send?access_token=xxxx" \
+ -e DINGTALK_SECRET="SEC000xxxxx" \
+ -v /var/run/docker.sock:/var/run/docker.sock -v dpanel:/dpanel \
+ dpanel/dpanel:lite
+```
+
+##### 容器告警配置
+
+```
+docker run -d --name dpanel --restart=always \
+ -p 8807:8080 -e APP_NAME=dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e CONTAINER_ALERT_MONITOR="mysql,nginx,app" \
+ -e CONTAINER_ALERT_EXCLUDE="temp,test" \
+ -e CONTAINER_ALERT_ON_STOP=false \
+ -e CONTAINER_ALERT_ON_DIE=true \
+ -e CONTAINER_ALERT_ON_OOM=true \
+ -e CONTAINER_ALERT_ON_HEALTH=true \
+ -e CONTAINER_ALERT_INTERVAL=60 \
+ -v /var/run/docker.sock:/var/run/docker.sock -v dpanel:/dpanel \
+ dpanel/dpanel:lite
+```
+
+#### 告警配置参数说明
+
+| 环境变量 | 说明 | 默认值 |
+| --- | --- | --- |
+| DINGTALK_ENABLED | 是否启用钉钉告警 | false |
+| DINGTALK_WEBHOOK_URL | 钉钉机器人Webhook地址 | "" |
+| DINGTALK_SECRET | 钉钉机器人安全设置的签名密钥 | "" |
+| CONTAINER_ALERT_ENABLED | 是否启用容器告警 | false |
+| CONTAINER_ALERT_MONITOR | 需要监控的容器名称，多个用逗号分隔，为空则监控所有容器 | "" |
+| CONTAINER_ALERT_EXCLUDE | 排除监控的容器名称，多个用逗号分隔 | "" |
+| CONTAINER_ALERT_ON_STOP | 容器停止时是否告警 | false |
+| CONTAINER_ALERT_ON_DIE | 容器异常退出时是否告警 | true |
+| CONTAINER_ALERT_ON_OOM | 容器OOM时是否告警 | true |
+| CONTAINER_ALERT_ON_HEALTH | 容器健康检查失败时是否告警 | true |
+| CONTAINER_ALERT_INTERVAL | 健康检查间隔（秒） | 60 |
+
 #### 集成脚本
 
 > 支持 Debian Ubuntu Alpine，其它发行版未进行测试，请提交 Issue

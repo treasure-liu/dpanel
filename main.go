@@ -13,6 +13,7 @@ import (
 	common2 "github.com/donknap/dpanel/common/middleware"
 	"github.com/donknap/dpanel/common/migrate"
 	"github.com/donknap/dpanel/common/service/family"
+	"github.com/donknap/dpanel/common/service/notice"
 	"github.com/donknap/dpanel/common/service/storage"
 	"github.com/donknap/dpanel/common/service/ws"
 	"github.com/gin-gonic/gin"
@@ -110,6 +111,9 @@ func main() {
 		new(family.Provider).Register(httpServer, facade.GetConsole())
 		new(common.Provider).Register(httpServer)
 		new(application.Provider).Register(httpServer)
+		
+		// 初始化容器告警监控
+		notice.InitContainerAlertMonitor()
 	}
 
 	new(ctrl.Provider).Register(facade.GetConsole())
