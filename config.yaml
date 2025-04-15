@@ -1,0 +1,42 @@
+app:
+  name: ${APP_NAME-dpanel}
+  version: ${APP_VERSION}
+  env: ${APP_ENV-lite}
+  family: ${APP_FAMILY-ce}
+  server: http
+  cors:
+    - http://localhost:8000
+server:
+  http:
+    host: 0.0.0.0
+    port: ${APP_SERVER_PORT-8086}
+log:
+  default:
+    driver: stack
+    channels:
+      - file
+      - console
+  file:
+    driver: file
+    path: run.log
+    level: info
+  console:
+    driver: console
+    level: debug
+database:
+  default:
+    driver: sqlite
+    user_name: ${DB_USERNAME-root}
+    password: ${DB_PASSWORD-123456}
+    db_name: ${STORAGE_LOCAL_PATH}/dpanel.db
+    charset: utf8mb4
+    prefix: ims_
+    options:
+      mode: ${DB_MODE}
+storage:
+  local:
+    path: ${STORAGE_LOCAL_PATH}
+jwt:
+  secret: ${DP_JWT_SECRET}
+common:
+  public_user_name: ${PUBLIC_USERNAME-__public__}

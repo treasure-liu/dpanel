@@ -1,0 +1,65 @@
+config:
+  tag_json_camel: lower
+relation:
+  - table: ims_site
+    column:
+      env:
+        serializer: json
+        type: SiteEnvOption
+      container_info:
+        type: SiteContainerInfoOption
+        serializer: json
+  - table: ims_image
+    column:
+      image_info:
+        type: ImageInfoOption
+      setting:
+        type: ImageSettingOption
+        serializer: json
+  - table: ims_setting
+    column:
+      value:
+        serializer: json
+        type: SettingValueOption
+  - table: ims_registry
+    column:
+      setting:
+        serializer: json
+        type: RegistrySettingOption
+  - table: ims_site_domain
+    column:
+      setting:
+        type: SiteDomainSettingOption
+        serializer: json
+  - table: ims_backup
+    column:
+      setting:
+        type: BackupSettingOption
+        serializer: json
+  - table: ims_event
+  - table: ims_notice
+  - table: ims_store
+    column:
+      setting:
+        type: StoreSettingOption
+        serializer: json
+  - table: ims_compose
+    column:
+      setting:
+        type: ComposeSettingOption
+        serializer: json
+  - table: ims_cron
+    column:
+      setting:
+        type: CronSettingOption
+        serializer: json
+  - table: ims_cron_log
+    column:
+      value:
+        type: CronLogValueOption
+        serializer: json
+  - table: ims_user_permission
+    column:
+      value:
+        type: PermissionValueOption
+        serializer: json
