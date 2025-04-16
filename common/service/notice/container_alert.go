@@ -117,7 +117,7 @@ func monitorContainerEvents(ctx context.Context) {
 	filter := filters.NewArgs()
 	filter.Add("type", "container")
 	
-	// 获取事件流
+	// 获取事件流，使用types.EventsOptions类型
 	eventChan, errChan := docker.Sdk.Client.Events(ctx, types.EventsOptions{
 		Filters: filter,
 	})

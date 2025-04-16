@@ -2,6 +2,7 @@ package notice
 
 import (
 	"context"
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/donknap/dpanel/common/service/docker"
@@ -37,7 +38,9 @@ func (m *EventMonitor) AddTypeFilter(typeValue string) *EventMonitor {
 // Start 开始监控
 func (m *EventMonitor) Start() (chan interface{}, chan error) {
 	// 使用docker sdk的Events方法，处理版本兼容性问题
-	events, errs := docker.Sdk.Client.Events(m.ctx, filters.Args{Filters: m.filter})
+	events, errs := docker.Sdk.Client.Events(m.ctx, types.EventsOptions{
+		Filters: m.filter,
+	})
 
 	// 转发事件和错误
 	go func() {
@@ -66,11 +69,13 @@ func (m *EventMonitor) Stop() {
 	}
 }
 
-// monitorEvents 监控Docker事件的兼容函数，避免直接使用可能变化的Docker API类型
-func monitorEvents(ctx context.Context, filterType string) (chan events.Message, chan error) {
+// MonitorEvents 监控Docker事件的兼容函数，避免直接使用可能变化的Docker API类型
+func MonitorEvents(ctx context.Context, filterType string) (<-chan events.Message, <-chan error) {
 	filter := filters.NewArgs()
 	filter.Add("type", filterType)
 	
-	// 调用Docker SDK的事件监控，不直接使用可能变化的类型名称
-	return docker.Sdk.Client.Events(ctx, filter)
+	// 调用Docker SDK的事件监控，注意返回类型
+	return docker.Sdk.Client.Events(ctx, types.EventsOptions{
+		Filters: filter,
+	})
 } 
