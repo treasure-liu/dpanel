@@ -12,6 +12,9 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
 WORKDIR /app
 COPY . .
 
+# 设置Go环境变量，使用阿里云镜像加速
+ENV GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+
 # 获取依赖
 RUN go mod download
 
@@ -66,7 +69,7 @@ ENV CONTAINER_ALERT_INTERVAL=60
 
 # 安装运行时依赖
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
-    apk add --no-cache --update musl docker-compose tzdata git sqlite && \
+    apk add --no-cache --update musl docker-compose tzdata git sqlite sqlite-dev && \
     mkdir -p /dpanel/storage
 
 # 从第一阶段复制编译好的应用

@@ -12,6 +12,9 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/re
 WORKDIR /app
 COPY . .
 
+# 设置Go环境变量，使用阿里云镜像加速
+ENV GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+
 # 获取依赖
 RUN go mod download
 
@@ -65,25 +68,26 @@ ENV CONTAINER_ALERT_ON_HEALTH=true
 ENV CONTAINER_ALERT_INTERVAL=60
 
 # 安装运行时依赖
+COPY --from=builder /app/docker/entrypoint.sh /docker/entrypoint.sh
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
-    apk add --no-cache --update musl docker-compose tzdata git sqlite nginx curl openssl && \
+    apk add --no-cache --update musl docker-compose tzdata git sqlite sqlite-dev nginx curl openssl && \
     mkdir -p /tmp/nginx/body /var/lib/nginx/cache/public /var/lib/nginx/cache/private && \
     mkdir -p /dpanel/nginx/default_host /dpanel/nginx/proxy_host \
     /dpanel/nginx/redirection_host /dpanel/nginx/dead_host /dpanel/nginx/temp \
-    /dpanel/cert /dpanel/storage
+    /dpanel/cert /dpanel/storage && \
+    chmod 755 /docker/entrypoint.sh 
 
 # 从第一阶段复制编译好的应用
 COPY --from=builder /app/dpanel /app/server/dpanel
 COPY --from=builder /app/config.yaml /app/server/config.yaml
 COPY --from=builder /app/docker/script /app/script
 
+
 # 添加nginx配置
 COPY --from=builder /app/docker/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY --from=builder /app/docker/nginx/include /etc/nginx/conf.d/include
 
-# 创建启动脚本
-RUN echo '#!/bin/sh\n\nchmod 755 /app/server/dpanel\ncrond\nnginx\n/app/server/dpanel server:start -f /app/server/config.yaml > /dev/stdout' > /app/start.sh && \
-    chmod +x /app/start.sh
+
 
 WORKDIR /app/server
 VOLUME [ "/dpanel" ]
@@ -92,4 +96,4 @@ EXPOSE 80
 EXPOSE 443
 EXPOSE 8080
 
-ENTRYPOINT [ "/app/start.sh" ] 
+ENTRYPOINT [ "/docker/entrypoint.sh" ] 

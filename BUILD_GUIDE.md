@@ -104,44 +104,6 @@ brew install sqlite
 #### Windows
 需要安装MinGW或MSYS2环境和SQLite开发库。
 
-### 解决兼容性问题
-
-如果您在构建过程中遇到以下错误：
-
-```
-common/service/notice/container_alert.go:121:60: undefined: types.EventsOptions
-```
-
-这是因为Docker API版本不兼容导致的。解决方法有：
-
-#### 方法1：使用修复版文件
-
-将`container_alert_fixed.go`文件替换`container_alert.go`文件：
-
-```bash
-# 重命名文件
-mv common/service/notice/container_alert_fixed.go common/service/notice/container_alert.go
-```
-
-#### 方法2：修改导入方式
-
-如果您仍然遇到问题，可以修改`container_alert.go`文件中的Docker事件监控实现：
-
-```go
-// 监听容器事件
-func monitorContainerEvents(ctx context.Context) {
-    // 创建过滤器，只监听容器事件
-    filter := filters.NewArgs()
-    filter.Add("type", "container")
-    
-    // 获取事件流，不使用EventsOptions类型
-    eventChan, errChan := docker.Sdk.Client.Events(ctx, filter)
-    
-    // 处理事件
-    // ...
-}
-```
-
 ### 1. 获取源码
 
 ```bash
@@ -445,4 +407,4 @@ brew tap messense/macos-cross-toolchains
 brew install x86_64-linux-musl aarch64-unknown-linux-musl
 ```
 
-更多问题请参阅官方文档或社区支持。 
+更多问题请参阅官方文档或社区支持。
