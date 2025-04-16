@@ -7,6 +7,7 @@
 - [源码构建指南](#源码构建指南)
   - [Go环境安装](#go环境安装)
   - [解决兼容性问题](#解决兼容性问题)
+- [Docker多阶段构建(推荐)](#docker多阶段构建推荐)
 - [快速启动](#快速启动) 
 - [容器告警配置](#容器告警配置)
 - [钉钉告警配置](#钉钉告警配置)
@@ -222,6 +223,57 @@ docker build --build-arg TARGETARCH=amd64 --build-arg APP_VERSION=latest -t dpan
 docker build -f Dockerfile-lite --build-arg TARGETARCH=amd64 --build-arg APP_VERSION=latest -t dpanel:lite .
 ```
 
+## Docker多阶段构建(推荐)
+
+为了避免跨平台编译问题和SQLite依赖问题，强烈推荐使用Docker多阶段构建方式。这种方式可以在同一个环境中完成编译和运行，确保二进制文件正常工作。
+
+### 1. 使用多阶段构建文件
+
+项目提供了两个多阶段构建的Dockerfile:
+
+- **Dockerfile.multi**: 标准版，包含Nginx和完整功能
+- **Dockerfile.multi-lite**: 精简版，不包含Nginx，只提供API服务
+
+这两个文件的优点:
+- 无需预先编译二进制文件
+- 自动启用CGO并安装所需依赖
+- 避免架构不匹配问题
+- 确保SQLite数据库正常工作
+
+### 2. 构建镜像
+
+```bash
+# 构建标准版
+docker build -t dpanel:latest -f Dockerfile.multi --build-arg APP_VERSION=1.0.0 .
+
+# 构建精简版
+docker build -t dpanel:lite -f Dockerfile.multi-lite --build-arg APP_VERSION=1.0.0 .
+
+# 构建专业版(pe)
+docker build -t dpanel-pe:latest -f Dockerfile.multi --build-arg APP_VERSION=1.0.0 --build-arg APP_FAMILY=pe .
+```
+
+### 3. 多架构构建
+
+如果需要构建多架构镜像，可以使用`docker buildx`:
+
+```bash
+# 创建并使用buildx构建器
+docker buildx create --name dpanel-builder --use
+
+# 构建并推送多架构镜像(标准版)
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
+  -t username/dpanel:latest -f Dockerfile.multi \
+  --build-arg APP_VERSION=1.0.0 \
+  --push .
+
+# 构建并推送多架构镜像(精简版)
+docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
+  -t username/dpanel:lite -f Dockerfile.multi-lite \
+  --build-arg APP_VERSION=1.0.0 \
+  --push .
+```
+
 ## 快速启动
 
 ### 使用预构建镜像
@@ -365,6 +417,12 @@ export CGO_ENABLED=1  # Linux/macOS
 set CGO_ENABLED=1     # Windows
 go build -o runtime/dpanel main.go
 ```
+或者使用本文档推荐的[Docker多阶段构建](#docker多阶段构建推荐)方式，它会自动处理CGO问题。
+
+**Q: 启动容器报错"/app/server/dpanel: not found"怎么办？**
+A: 这通常是因为二进制文件没有正确编译或复制到容器中。有两种解决方法：
+1. 使用本文档推荐的多阶段构建方式 (Dockerfile.multi)
+2. 检查您的Dockerfile中复制二进制文件的路径是否正确
 
 **Q: 编译时遇到Docker API相关错误怎么办？**  
 A: 请参阅上面的[解决兼容性问题](#解决兼容性问题)部分。Docker SDK版本不同可能会导致API不兼容，我们提供了解决方案。
