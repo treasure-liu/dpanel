@@ -6,6 +6,7 @@
 
 - [源码构建指南](#源码构建指南)
   - [Go环境安装](#go环境安装)
+  - [解决兼容性问题](#解决兼容性问题)
 - [快速启动](#快速启动) 
 - [容器告警配置](#容器告警配置)
 - [钉钉告警配置](#钉钉告警配置)
@@ -75,6 +76,44 @@ go env -w GOPROXY=https://goproxy.cn,direct
 
 # 或者使用阿里云镜像
 # go env -w GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+```
+
+### 解决兼容性问题
+
+如果您在构建过程中遇到以下错误：
+
+```
+common/service/notice/container_alert.go:121:60: undefined: types.EventsOptions
+```
+
+这是因为Docker API版本不兼容导致的。解决方法有：
+
+#### 方法1：使用修复版文件
+
+将`container_alert_fixed.go`文件替换`container_alert.go`文件：
+
+```bash
+# 重命名文件
+mv common/service/notice/container_alert_fixed.go common/service/notice/container_alert.go
+```
+
+#### 方法2：修改导入方式
+
+如果您仍然遇到问题，可以修改`container_alert.go`文件中的Docker事件监控实现：
+
+```go
+// 监听容器事件
+func monitorContainerEvents(ctx context.Context) {
+    // 创建过滤器，只监听容器事件
+    filter := filters.NewArgs()
+    filter.Add("type", "container")
+    
+    // 获取事件流，不使用EventsOptions类型
+    eventChan, errChan := docker.Sdk.Client.Events(ctx, filter)
+    
+    // 处理事件
+    // ...
+}
 ```
 
 ### 1. 获取源码
@@ -269,5 +308,8 @@ ENV CONTAINER_ALERT_ENABLED=false
 ENV CONTAINER_ALERT_ENABLED=true
 ENV CONTAINER_ALERT_MONITOR="mysql,nginx"
 ```
+
+**Q: 编译时遇到Docker API相关错误怎么办？**  
+A: 请参阅上面的[解决兼容性问题](#解决兼容性问题)部分。Docker SDK版本不同可能会导致API不兼容，我们提供了解决方案。
 
 更多问题请参阅官方文档或社区支持。 
