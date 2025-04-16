@@ -19,6 +19,7 @@
 - Go 1.16或更高版本
 - Docker
 - Git
+- CGO支持（编译SQLite必需）
 
 ### Go环境安装
 
@@ -78,6 +79,30 @@ go env -w GOPROXY=https://goproxy.cn,direct
 # go env -w GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
 ```
 
+### 安装编译依赖
+
+DPanel使用SQLite数据库，需要CGO支持，请确保安装必要的系统依赖：
+
+#### Linux（Ubuntu/Debian）
+```bash
+apt-get update
+apt-get install -y build-essential libsqlite3-dev
+```
+
+#### Linux（CentOS/RHEL）
+```bash
+yum groupinstall -y "Development Tools"
+yum install -y sqlite-devel
+```
+
+#### macOS
+```bash
+brew install sqlite
+```
+
+#### Windows
+需要安装MinGW或MSYS2环境和SQLite开发库。
+
 ### 解决兼容性问题
 
 如果您在构建过程中遇到以下错误：
@@ -125,17 +150,23 @@ cd dpanel
 
 ### 2. 使用Makefile构建（推荐）
 
-项目提供了Makefile来简化构建过程：
+项目提供了Makefile来简化构建过程。**注意：所有构建命令必须启用CGO_ENABLED=1，否则SQLite无法正常工作**。
 
 ```bash
-# 构建所有内容（包含编译和生成Docker镜像）
+# 构建所有平台版本
 make all
 
-# 仅构建二进制文件
+# 仅构建当前平台二进制文件
 make build
 
-# 仅构建Docker镜像
-make docker-build
+# 构建Linux amd64架构
+make amd64
+
+# 构建Linux arm64架构
+make arm64
+
+# 构建Linux armv7架构
+make armv7
 ```
 
 ### 3. 手动构建
@@ -144,22 +175,40 @@ make docker-build
 
 #### a. 编译二进制文件
 
+**重要：必须设置CGO_ENABLED=1，确保SQLite数据库可以正常工作**
+
 ```bash
 # 创建输出目录
 mkdir -p runtime
 
 # 编译（根据您的目标平台选择对应的GOOS和GOARCH）
 # Linux AMD64:
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o runtime/dpanel-musl-amd64 main.go
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o runtime/dpanel-musl-amd64 main.go
 
 # Linux ARM64:
-CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o runtime/dpanel-musl-arm64 main.go
+CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -ldflags="-w -s" -o runtime/dpanel-musl-arm64 main.go
 
 # 拷贝配置文件
 cp config.yaml runtime/config.yaml
 ```
 
-#### b. 构建Docker镜像
+#### b. 跨平台编译（使用musl-cross）
+
+如果需要在macOS或其他平台上交叉编译Linux二进制文件，需要安装相应的交叉编译工具链：
+
+```bash
+# macOS上安装musl交叉编译工具链
+brew tap messense/macos-cross-toolchains
+brew install x86_64-linux-musl
+brew install aarch64-unknown-linux-musl
+brew install armv7-unknown-linux-musleabihf
+
+# 然后使用工具链编译
+CGO_ENABLED=1 GOARCH=amd64 GOOS=linux CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ \
+go build -ldflags="-w -s" -o runtime/dpanel-musl-amd64 main.go
+```
+
+#### c. 构建Docker镜像
 
 标准版（包含Nginx和域名转发功能）：
 
@@ -309,7 +358,33 @@ ENV CONTAINER_ALERT_ENABLED=true
 ENV CONTAINER_ALERT_MONITOR="mysql,nginx"
 ```
 
+**Q: 启动时报错"Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work"怎么办？**  
+A: 这是因为SQLite驱动需要CGO支持。确保在编译时设置`CGO_ENABLED=1`：
+```bash
+export CGO_ENABLED=1  # Linux/macOS
+set CGO_ENABLED=1     # Windows
+go build -o runtime/dpanel main.go
+```
+
 **Q: 编译时遇到Docker API相关错误怎么办？**  
 A: 请参阅上面的[解决兼容性问题](#解决兼容性问题)部分。Docker SDK版本不同可能会导致API不兼容，我们提供了解决方案。
+
+**Q: 在Alpine容器中运行报错"no such file or directory"怎么办？**  
+A: 确保Alpine容器中安装了SQLite：
+```bash
+apk add --no-cache sqlite
+```
+
+**Q: 交叉编译时出现"gcc: command not found"错误怎么办？**  
+A: 需要安装对应平台的交叉编译工具链：
+```bash
+# Ubuntu/Debian
+apt-get install -y gcc-aarch64-linux-gnu  # ARM64
+apt-get install -y gcc-arm-linux-gnueabihf  # ARMv7
+
+# 或使用musl交叉编译工具链（macOS）
+brew tap messense/macos-cross-toolchains
+brew install x86_64-linux-musl aarch64-unknown-linux-musl
+```
 
 更多问题请参阅官方文档或社区支持。 

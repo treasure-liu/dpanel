@@ -55,7 +55,7 @@ COPY ./runtime/config.yaml /app/server/config.yaml
 COPY ./docker/entrypoint.sh /docker/entrypoint.sh
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
-  apk add --no-cache --update nginx musl docker-compose curl openssl tzdata git && \
+  apk add --no-cache --update nginx musl docker-compose curl openssl tzdata git sqlite sqlite-dev && \
   mkdir -p /tmp/nginx/body /var/lib/nginx/cache/public /var/lib/nginx/cache/private && \
   export ${PROXY} && curl https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh | sh -s -- --install-online --config-home /dpanel/acme && \
   chmod 755 /docker/entrypoint.sh

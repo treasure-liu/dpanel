@@ -45,7 +45,7 @@ ENV CONTAINER_ALERT_ON_HEALTH=true
 ENV CONTAINER_ALERT_INTERVAL=60
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
-  apk add --no-cache --update musl docker-compose tzdata git
+  apk add --no-cache --update musl docker-compose tzdata git sqlite sqlite-dev
 
 COPY ./runtime/dpanel${APP_FAMILY:+"-${APP_FAMILY}"}-musl-${TARGETARCH} /app/server/dpanel
 COPY ./runtime/config.yaml /app/server/config.yaml
