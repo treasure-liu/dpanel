@@ -112,24 +112,25 @@ func InitContainerAlertMonitor() {
 
 // 监听容器事件
 func monitorContainerEvents(ctx context.Context) {
-	// 创建过滤器，只监听容器事件
-	filter := filters.NewArgs()
-	filter.Add("type", "container")
-	
-	// 直接使用filter参数，不使用EventsOptions类型
-	eventChan, errChan := docker.Sdk.Client.Events(ctx, filter)
+	filterArgs := filters.NewArgs()
+	filterArgs.Add("type", "container")
 
-	// 处理事件
+	// 使用events.ListOptions类型
+	eventCh, errCh := docker.Sdk.Client.Events(ctx, events.ListOptions{
+		Filters: filterArgs,
+	})
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case err := <-errChan:
+		case err := <-errCh:
 			if err != nil && err != io.EOF {
-				slog.Error("容器事件监听错误", "error", err)
+				slog.Error("监控容器事件出错", "error", err)
 			}
 			return
-		case event := <-eventChan:
+		case event := <-eventCh:
+			// 处理容器事件
 			handleContainerEvent(event)
 		}
 	}
