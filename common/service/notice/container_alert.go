@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
@@ -117,10 +116,8 @@ func monitorContainerEvents(ctx context.Context) {
 	filter := filters.NewArgs()
 	filter.Add("type", "container")
 	
-	// 获取事件流，使用types.EventsOptions类型
-	eventChan, errChan := docker.Sdk.Client.Events(ctx, types.EventsOptions{
-		Filters: filter,
-	})
+	// 直接使用filter参数，不使用EventsOptions类型
+	eventChan, errChan := docker.Sdk.Client.Events(ctx, filter)
 
 	// 处理事件
 	for {

@@ -2,7 +2,6 @@ package notice
 
 import (
 	"context"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/donknap/dpanel/common/service/docker"
@@ -37,10 +36,8 @@ func (m *EventMonitor) AddTypeFilter(typeValue string) *EventMonitor {
 
 // Start 开始监控
 func (m *EventMonitor) Start() (chan interface{}, chan error) {
-	// 使用docker sdk的Events方法，处理版本兼容性问题
-	events, errs := docker.Sdk.Client.Events(m.ctx, types.EventsOptions{
-		Filters: m.filter,
-	})
+	// 使用docker sdk的Events方法，直接传递filter参数
+	events, errs := docker.Sdk.Client.Events(m.ctx, m.filter)
 
 	// 转发事件和错误
 	go func() {
@@ -74,8 +71,6 @@ func MonitorEvents(ctx context.Context, filterType string) (<-chan events.Messag
 	filter := filters.NewArgs()
 	filter.Add("type", filterType)
 	
-	// 调用Docker SDK的事件监控，注意返回类型
-	return docker.Sdk.Client.Events(ctx, types.EventsOptions{
-		Filters: filter,
-	})
+	// 直接传递filter参数
+	return docker.Sdk.Client.Events(ctx, filter)
 } 
