@@ -11,6 +11,9 @@
 - [快速启动](#快速启动) 
 - [容器告警配置](#容器告警配置)
 - [钉钉告警配置](#钉钉告警配置)
+- [邮件告警配置](#邮件告警配置)
+- [飞书告警配置](#飞书告警配置)
+- [企业微信告警配置](#企业微信告警配置)
 - [常见问题](#常见问题)
 
 ## 源码构建指南
@@ -346,6 +349,205 @@ DPanel支持将容器告警消息推送到钉钉群机器人：
 3. 创建后获取Webhook地址和签名密钥（SEC开头的字符串）
 4. 将获取到的信息填入环境变量
 
+## 邮件告警配置
+
+DPanel支持通过邮件发送容器告警通知，配置方式如下：
+
+```bash
+# 启用邮件告警
+-e EMAIL_ENABLED=true \
+
+# SMTP服务器设置
+-e EMAIL_HOST="smtp.example.com" \
+-e EMAIL_PORT="465" \
+-e EMAIL_USERNAME="user@example.com" \
+-e EMAIL_PASSWORD="password" \
+
+# 发件人和收件人
+-e EMAIL_FROM="user@example.com" \
+-e EMAIL_TO="recipient1@example.com,recipient2@example.com" \
+
+# 是否使用SSL连接，一般465端口需要设置为true，25端口设置为false
+-e EMAIL_USE_SSL=true \
+```
+
+### 常见邮件服务器配置
+
+#### Gmail
+
+```bash
+-e EMAIL_HOST="smtp.gmail.com" \
+-e EMAIL_PORT="465" \
+-e EMAIL_USERNAME="your-email@gmail.com" \
+-e EMAIL_PASSWORD="your-app-password" \
+-e EMAIL_USE_SSL=true
+```
+
+注意：Gmail 需要使用应用专用密码，请参考 [Google 应用专用密码](https://support.google.com/accounts/answer/185833)。
+
+#### QQ邮箱
+
+```bash
+-e EMAIL_HOST="smtp.qq.com" \
+-e EMAIL_PORT="465" \
+-e EMAIL_USERNAME="your-qq-number@qq.com" \
+-e EMAIL_PASSWORD="your-authorization-code" \
+-e EMAIL_USE_SSL=true
+```
+
+注意：QQ邮箱需要使用授权码，不是QQ密码，请在QQ邮箱设置中获取授权码。
+
+#### 阿里云企业邮箱
+
+```bash
+-e EMAIL_HOST="smtp.qiye.aliyun.com" \
+-e EMAIL_PORT="465" \
+-e EMAIL_USERNAME="your-email@your-domain.com" \
+-e EMAIL_PASSWORD="your-password" \
+-e EMAIL_USE_SSL=true
+```
+
+### 完整配置示例
+
+以下是一个包含邮件告警配置的完整Docker运行命令示例：
+
+```bash
+docker run -d --name dpanel --restart=always \
+ -p 80:80 -p 443:443 -p 8807:8080 \
+ -e APP_NAME=dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e CONTAINER_ALERT_MONITOR="mysql,nginx,redis" \
+ -e EMAIL_ENABLED=true \
+ -e EMAIL_HOST="smtp.gmail.com" \
+ -e EMAIL_PORT="465" \
+ -e EMAIL_USERNAME="your-email@gmail.com" \
+ -e EMAIL_PASSWORD="your-app-password" \
+ -e EMAIL_FROM="your-email@gmail.com" \
+ -e EMAIL_TO="recipient@example.com" \
+ -e EMAIL_USE_SSL=true \
+ -v /var/run/docker.sock:/var/run/docker.sock \
+ -v dpanel:/dpanel \
+ dpanel/dpanel:latest
+```
+
+或者使用Docker Compose:
+
+```yaml
+version: '3'
+
+services:
+  dpanel:
+    image: dpanel/dpanel:latest
+    container_name: dpanel
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dpanel:/dpanel
+    ports:
+      - 80:80
+      - 443:443
+      - 8807:8080
+    environment:
+      - APP_NAME=dpanel
+      - CONTAINER_ALERT_ENABLED=true
+      - CONTAINER_ALERT_MONITOR=mysql,nginx,redis
+      - EMAIL_ENABLED=true
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=465
+      - EMAIL_USERNAME=your-email@gmail.com
+      - EMAIL_PASSWORD=your-app-password
+      - EMAIL_FROM=your-email@gmail.com
+      - EMAIL_TO=recipient@example.com
+      - EMAIL_USE_SSL=true
+    restart: always
+
+volumes:
+  dpanel:
+```
+
+## 飞书告警配置
+
+DPanel支持将容器告警消息推送到飞书群机器人，配置方式如下：
+
+```bash
+# 启用飞书告警
+-e FEISHU_ENABLED=true \
+
+# 设置飞书机器人Webhook地址
+-e FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+
+# 设置飞书安全设置的签名密钥（如果机器人设置了签名验证）
+-e FEISHU_SECRET="xxxxxxxxxxxxxx" \
+```
+
+### 飞书机器人配置步骤
+
+1. 进入飞书群 -> 点击群设置 -> 群机器人 -> 添加机器人
+2. 选择"自定义机器人"
+3. 配置机器人：
+   - 名称：随意设置，如"容器告警"
+   - 安全设置：可选择"签名校验"（获取签名密钥）
+   - 权限：允许发送消息
+4. 创建后获取Webhook地址和签名密钥
+5. 将获取到的信息填入环境变量
+
+### 完整配置示例
+
+以下是一个包含飞书告警配置的完整Docker运行命令示例：
+
+```bash
+docker run -d --name dpanel --restart=always \
+ -p 80:80 -p 443:443 -p 8807:8080 \
+ -e APP_NAME=dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e CONTAINER_ALERT_MONITOR="mysql,nginx,redis" \
+ -e FEISHU_ENABLED=true \
+ -e FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+ -e FEISHU_SECRET="xxxxxxxxxxxxxx" \
+ -v /var/run/docker.sock:/var/run/docker.sock \
+ -v dpanel:/dpanel \
+ dpanel/dpanel:latest
+```
+
+## 企业微信告警配置
+
+DPanel支持将容器告警消息推送到企业微信群机器人，配置方式如下：
+
+```bash
+# 启用企业微信告警
+-e WECHATWORK_ENABLED=true \
+
+# 设置企业微信机器人Webhook地址
+-e WECHATWORK_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+```
+
+### 企业微信机器人配置步骤
+
+1. 进入企业微信群聊 -> 点击右上角三个点 -> 添加群机器人
+2. 选择"新创建一个机器人"
+3. 配置机器人：
+   - 名称：随意设置，如"容器告警"
+   - 描述：如"监控容器状态"
+   - 头像：可选
+4. 创建后获取Webhook地址（Key）
+5. 将获取到的Webhook地址填入环境变量
+
+### 完整配置示例
+
+以下是一个包含企业微信告警配置的完整Docker运行命令示例：
+
+```bash
+docker run -d --name dpanel --restart=always \
+ -p 80:80 -p 443:443 -p 8807:8080 \
+ -e APP_NAME=dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e CONTAINER_ALERT_MONITOR="mysql,nginx,redis" \
+ -e WECHATWORK_ENABLED=true \
+ -e WECHATWORK_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+ -v /var/run/docker.sock:/var/run/docker.sock \
+ -v dpanel:/dpanel \
+ dpanel/dpanel:latest
+```
+
 ## 常见问题
 
 **Q: 如何查看告警功能是否正常工作？**  
@@ -370,6 +572,62 @@ ENV CONTAINER_ALERT_ENABLED=false
 # 修改后
 ENV CONTAINER_ALERT_ENABLED=true
 ENV CONTAINER_ALERT_MONITOR="mysql,nginx"
+```
+
+**Q: 邮件告警配置正确但收不到邮件怎么办？**  
+A: 请检查以下几点：
+1. 确认 `EMAIL_ENABLED=true` 已设置
+2. 检查SMTP服务器地址和端口是否正确
+3. 检查用户名和密码是否正确（有些邮件服务需要使用授权码而非普通密码）
+4. 如果使用Gmail等服务，可能需要开启"不安全应用"访问权限或使用应用专用密码
+5. 检查容器日志中是否有邮件发送的错误信息
+
+**Q: 使用Office 365或Exchange邮箱无法发送邮件怎么办？**  
+A: Office 365和某些Exchange服务器可能需要特殊的认证方式，可以尝试：
+1. 使用应用密码而非普通密码
+2. 确认邮箱账户已启用SMTP访问权限
+3. 检查是否有网络或防火墙限制
+
+**Q: 为什么会收到重复的告警邮件？**  
+A: 这可能是因为：
+1. 容器反复重启或状态频繁变化
+2. 多个监控实例同时监控相同的容器
+3. 设置了过短的检查间隔
+
+可以通过调整 `CONTAINER_ALERT_INTERVAL` 或使用更精确的 `CONTAINER_ALERT_MONITOR` 配置来减少重复告警。
+
+**Q: 飞书机器人配置正确但收不到通知怎么办？**  
+A: 请检查以下几点：
+1. 确认 `FEISHU_ENABLED=true` 已设置
+2. 检查Webhook地址是否正确，需要完整的URL包含https://
+3. 如果启用了签名校验，确保 `FEISHU_SECRET` 正确填写
+4. 确认机器人在群内有足够的权限发送消息
+5. 检查容器日志中是否有飞书消息发送的错误信息
+
+**Q: 企业微信机器人收不到告警通知怎么办？**  
+A: 可能的原因包括：
+1. 确认 `WECHATWORK_ENABLED=true` 已设置
+2. Webhook地址可能有误，应以 `https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=` 开头
+3. 企业微信机器人可能有频率限制，短时间内不要发送过多消息
+4. 检查容器日志，查看是否有相关错误
+
+**Q: 如何同时启用多种告警方式？**  
+A: 您可以同时启用多种告警方式，例如：
+```bash
+docker run -d --name dpanel \
+ -e CONTAINER_ALERT_ENABLED=true \
+ -e DINGTALK_ENABLED=true \
+ -e DINGTALK_WEBHOOK_URL="https://oapi.dingtalk.com/robot/send?access_token=xxxx" \
+ -e EMAIL_ENABLED=true \
+ -e EMAIL_HOST="smtp.example.com" \
+ -e EMAIL_USERNAME="user@example.com" \
+ -e EMAIL_PASSWORD="password" \
+ -e EMAIL_TO="recipient@example.com" \
+ -e FEISHU_ENABLED=true \
+ -e FEISHU_WEBHOOK_URL="https://open.feishu.cn/open-apis/bot/v2/hook/xxx" \
+ -e WECHATWORK_ENABLED=true \
+ -e WECHATWORK_WEBHOOK_URL="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx" \
+ ... 其他配置
 ```
 
 **Q: 启动时报错"Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work"怎么办？**  

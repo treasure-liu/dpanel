@@ -195,6 +195,15 @@ func handleContainerEvent(event events.Message) {
 		
 		// 发送钉钉通知
 		_ = SendDingtalkMessage("容器告警", alertMsg, TypeError)
+		
+		// 发送邮件通知
+		_ = SendEmailMessage("容器告警", alertMsg, TypeError)
+		
+		// 发送飞书通知
+		_ = SendFeishuMessage("容器告警", alertMsg, TypeError)
+		
+		// 发送企业微信通知
+		_ = SendWechatWorkMessage("容器告警", alertMsg, TypeError)
 	}
 }
 
@@ -281,6 +290,15 @@ func checkContainersHealth() {
 			
 			// 发送钉钉通知
 			_ = SendDingtalkMessage("容器健康告警", alertMsg, TypeError)
+			
+			// 发送邮件通知
+			_ = SendEmailMessage("容器健康告警", alertMsg, TypeError)
+			
+			// 发送飞书通知
+			_ = SendFeishuMessage("容器健康告警", alertMsg, TypeError)
+			
+			// 发送企业微信通知
+			_ = SendWechatWorkMessage("容器健康告警", alertMsg, TypeError)
 		}
 	}
 } 

@@ -25,6 +25,38 @@ ENV DINGTALK_WEBHOOK_URL=""
 # 钉钉机器人安全设置的签名密钥（机器人安全设置选择"加签"后的SEC密钥）
 ENV DINGTALK_SECRET=""
 
+# ====== 邮件告警配置 ======
+# 是否启用邮件告警通知，设置为true启用，false禁用
+ENV EMAIL_ENABLED=false
+# SMTP服务器地址
+ENV EMAIL_HOST=""
+# SMTP服务器端口
+ENV EMAIL_PORT="465"
+# SMTP用户名（通常为发件人邮箱地址）
+ENV EMAIL_USERNAME=""
+# SMTP密码或授权码
+ENV EMAIL_PASSWORD=""
+# 发件人邮箱
+ENV EMAIL_FROM=""
+# 收件人邮箱（多个收件人用逗号分隔）
+ENV EMAIL_TO=""
+# 是否使用SSL连接，一般465端口需要设置为true，25端口设置为false
+ENV EMAIL_USE_SSL=true
+
+# ====== 飞书告警配置 ======
+# 是否启用飞书告警通知，设置为true启用，false禁用
+ENV FEISHU_ENABLED=false
+# 飞书机器人webhook地址
+ENV FEISHU_WEBHOOK_URL=""
+# 飞书机器人安全设置的签名密钥
+ENV FEISHU_SECRET=""
+
+# ====== 企业微信告警配置 ======
+# 是否启用企业微信告警通知，设置为true启用，false禁用
+ENV WECHATWORK_ENABLED=false
+# 企业微信机器人webhook地址
+ENV WECHATWORK_WEBHOOK_URL=""
+
 # ====== 容器告警配置 ======
 # 是否启用容器状态告警，设置为true启用，false禁用
 ENV CONTAINER_ALERT_ENABLED=false
@@ -67,4 +99,4 @@ EXPOSE 443
 EXPOSE 80
 EXPOSE 8080
 
-ENTRYPOINT [ "/docker/entrypoint.sh" ]
+ENTRYPOINT [ "/docker/entrypoint.sh" ] 
