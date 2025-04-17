@@ -4,9 +4,9 @@
 
 ## 目录
 
-- [源码构建指南](#源码构建指南)
+- [源码构建指南(推荐使用Dockerfile.multi进行整体构建)](#源码构建指南)
   - [Go环境安装](#go环境安装)
-  - [解决兼容性问题](#解决兼容性问题)
+  - [安装编译依赖](#安装编译依赖)
 - [Docker多阶段构建(推荐)](#docker多阶段构建推荐)
 - [快速启动](#快速启动) 
 - [容器告警配置](#容器告警配置)
@@ -110,6 +110,8 @@ brew install sqlite
 ### 1. 获取源码
 
 ```bash
+git clone https://gitee.com/treasure_liu/dpanel.git
+# Github原地址
 git clone https://github.com/donknap/dpanel.git
 cd dpanel
 ```
