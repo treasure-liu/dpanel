@@ -203,7 +203,7 @@ func handleContainerEvent(event events.Message) {
 		// 发送钉钉通知
 		err := SendDingtalkMessage("容器告警", alertMsg, TypeError)
 		if err != nil {
-			analyzeAndLogError("钉钉", err, containerName, event.Action)
+			analyzeAndLogError("钉钉", err, containerName, string(event.Action))
 		} else if GetDingtalkConfig().IsEnabled {
 			slog.Info("已发送告警通知", "container", containerName, "type", "钉钉")
 		}
@@ -211,7 +211,7 @@ func handleContainerEvent(event events.Message) {
 		// 发送邮件通知
 		err = SendEmailMessage("容器告警", alertMsg, TypeError)
 		if err != nil {
-			analyzeAndLogError("邮件", err, containerName, event.Action)
+			analyzeAndLogError("邮件", err, containerName, string(event.Action))
 		} else if GetEmailConfig().IsEnabled {
 			slog.Info("已发送告警通知", "container", containerName, "type", "邮件")
 		}
@@ -219,7 +219,7 @@ func handleContainerEvent(event events.Message) {
 		// 发送飞书通知
 		err = SendFeishuMessage("容器告警", alertMsg, TypeError)
 		if err != nil {
-			analyzeAndLogError("飞书", err, containerName, event.Action)
+			analyzeAndLogError("飞书", err, containerName, string(event.Action))
 		} else if GetFeishuConfig().IsEnabled {
 			slog.Info("已发送告警通知", "container", containerName, "type", "飞书")
 		}
@@ -227,7 +227,7 @@ func handleContainerEvent(event events.Message) {
 		// 发送企业微信通知
 		err = SendWechatWorkMessage("容器告警", alertMsg, TypeError)
 		if err != nil {
-			analyzeAndLogError("企业微信", err, containerName, event.Action)
+			analyzeAndLogError("企业微信", err, containerName, string(event.Action))
 		} else if GetWechatWorkConfig().IsEnabled {
 			slog.Info("已发送告警通知", "container", containerName, "type", "企业微信")
 		}
@@ -355,59 +355,64 @@ func checkContainersHealth() {
 func analyzeAndLogError(noticeType string, err error, containerName string, eventType string) {
 	errMsg := err.Error()
 	
-	// 创建基本的错误日志
-	errLog := slog.ErrorAttrs(
-		noticeType+"通知发送失败",
-		slog.String("error", errMsg),
-		slog.String("container", containerName),
-		slog.String("event", eventType),
-	)
+	// 创建基本的错误日志属性
+	errAttrs := []any{
+		"error", errMsg,
+		"container", containerName,
+		"event", eventType,
+	}
 	
 	// 根据不同通知类型和错误模式分析可能的原因
+	var reason string
 	switch noticeType {
 	case "钉钉":
 		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
-			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+			reason = "网络连接问题，请检查网络连接或代理设置"
 		} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "unauthorized") {
-			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效或已过期，请更新钉钉机器人配置"))
+			reason = "Webhook地址无效或已过期，请更新钉钉机器人配置"
 		} else if strings.Contains(errMsg, "sign") || strings.Contains(errMsg, "signature") {
-			errLog = append(errLog, slog.String("可能原因", "签名验证失败，请检查Secret配置是否正确"))
+			reason = "签名验证失败，请检查Secret配置是否正确"
 		} else if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "too many requests") {
-			errLog = append(errLog, slog.String("可能原因", "发送频率超过钉钉限制，请降低发送频率"))
+			reason = "发送频率超过钉钉限制，请降低发送频率"
 		}
 		
 	case "邮件":
 		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
-			errLog = append(errLog, slog.String("可能原因", "无法连接到SMTP服务器，请检查服务器地址和端口"))
+			reason = "无法连接到SMTP服务器，请检查服务器地址和端口"
 		} else if strings.Contains(errMsg, "authentication failed") || strings.Contains(errMsg, "auth") {
-			errLog = append(errLog, slog.String("可能原因", "SMTP认证失败，请检查用户名和密码"))
+			reason = "SMTP认证失败，请检查用户名和密码"
 		} else if strings.Contains(errMsg, "tls") || strings.Contains(errMsg, "SSL") {
-			errLog = append(errLog, slog.String("可能原因", "SSL/TLS连接问题，请检查EMAIL_USE_SSL设置是否与服务器匹配"))
+			reason = "SSL/TLS连接问题，请检查EMAIL_USE_SSL设置是否与服务器匹配"
 		} else if strings.Contains(errMsg, "recipient") || strings.Contains(errMsg, "sender") {
-			errLog = append(errLog, slog.String("可能原因", "发件人或收件人地址无效，请检查EMAIL_FROM和EMAIL_TO配置"))
+			reason = "发件人或收件人地址无效，请检查EMAIL_FROM和EMAIL_TO配置"
 		}
 		
 	case "飞书":
 		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
-			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+			reason = "网络连接问题，请检查网络连接或代理设置"
 		} else if strings.Contains(errMsg, "sign") || strings.Contains(errMsg, "token") {
-			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效或签名错误，请检查配置"))
+			reason = "Webhook地址无效或签名错误，请检查配置"
 		} else if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "limit") {
-			errLog = append(errLog, slog.String("可能原因", "发送频率超过飞书限制，请降低发送频率"))
+			reason = "发送频率超过飞书限制，请降低发送频率"
 		}
 		
 	case "企业微信":
 		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
-			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+			reason = "网络连接问题，请检查网络连接或代理设置"
 		} else if strings.Contains(errMsg, "40014") || strings.Contains(errMsg, "invalid") {
-			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效，请检查key参数"))
+			reason = "Webhook地址无效，请检查key参数"
 		} else if strings.Contains(errMsg, "45009") || strings.Contains(errMsg, "limit") {
-			errLog = append(errLog, slog.String("可能原因", "企业微信API调用频率限制，请降低发送频率"))
+			reason = "企业微信API调用频率限制，请降低发送频率"
 		}
 	}
 	
+	// 如果找到可能的原因，添加到日志属性中
+	if reason != "" {
+		errAttrs = append(errAttrs, "可能原因", reason)
+	}
+	
 	// 记录详细的错误信息
-	slog.LogAttrs(context.Background(), slog.LevelError, noticeType+"通知发送失败", errLog...)
+	slog.Error(noticeType+"通知发送失败", errAttrs...)
 	
 	// 记录调试提示
 	slog.Debug("通知发送问题排查建议", 
