@@ -12,6 +12,7 @@ import (
 	"github.com/donknap/dpanel/common/function"
 	common2 "github.com/donknap/dpanel/common/middleware"
 	"github.com/donknap/dpanel/common/migrate"
+	"github.com/donknap/dpanel/common/logger"
 	"github.com/donknap/dpanel/common/service/family"
 	"github.com/donknap/dpanel/common/service/notice"
 	"github.com/donknap/dpanel/common/service/storage"
@@ -39,6 +40,9 @@ var (
 )
 
 func main() {
+	// 初始化日志系统
+	logger.Setup()
+	
 	// 兼容没有配置存储目录的情况
 	if os.Getenv("STORAGE_LOCAL_PATH") == "" {
 		exePath, _ := os.Executable()

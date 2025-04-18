@@ -39,6 +39,22 @@ ENV DB_DATABASE=${STORAGE_LOCAL_PATH}/dpanel.db
 ENV TZ=Asia/Shanghai
 ENV ACME_OVERRIDE_CONFIG_HOME=/dpanel/acme
 
+# ====== 日志配置 ======
+# 日志级别: debug, info, warn, error
+ENV LOG_LEVEL=info
+# 日志格式: text, json
+ENV LOG_FORMAT=text
+# 是否输出到文件
+ENV LOG_TO_FILE=false
+# 日志文件路径
+ENV LOG_FILE_PATH=/var/log/dpanel/alert.log
+# 日志轮转相关配置
+ENV LOG_ROTATE=true
+ENV LOG_ROTATE_DAILY=true
+ENV LOG_MAX_SIZE=100
+ENV LOG_MAX_BACKUPS=7
+ENV LOG_MAX_AGE=30
+
 # ====== 钉钉告警配置 ======
 # 是否启用钉钉告警通知，设置为true启用，false禁用
 ENV DINGTALK_ENABLED=false

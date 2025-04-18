@@ -253,6 +253,121 @@ CONTAINER_ALERT_ON_HEALTH=true  # 健康检查失败
 CONTAINER_ALERT_INTERVAL=60
 ```
 
+## 告警日志查看与配置
+
+### 查看告警日志
+
+DPanel的告警消息和发送状态可以通过Docker日志查看：
+
+```bash
+# 查看实时日志，包括告警检测和发送状态
+docker logs -f dpanel
+
+# 只查看告警相关日志
+docker logs dpanel | grep -i "告警"
+
+# 查看最近100条日志
+docker logs --tail=100 dpanel
+
+# 查看特定时间范围内的日志
+docker logs --since="2023-05-01T00:00:00" --until="2023-05-02T00:00:00" dpanel
+
+# 查看通知发送失败信息
+docker logs dpanel | grep "通知发送失败"
+
+# 查看可能的错误原因
+docker logs dpanel | grep "可能原因"
+```
+
+### 日志文件配置
+
+DPanel支持将日志同时输出到控制台和日志文件，并提供内置的日志轮转功能，可以通过以下环境变量配置：
+
+```bash
+# 基本日志配置
+-e LOG_LEVEL=info \          # 日志级别：debug, info, warn, error
+-e LOG_FORMAT=text \         # 日志格式：text, json
+-e LOG_TO_FILE=true \        # 是否写入日志文件
+-e LOG_FILE_PATH=/var/log/dpanel/alert.log \  # 日志文件路径
+
+# 日志轮转配置
+-e LOG_ROTATE=true \         # 是否启用日志轮转
+-e LOG_ROTATE_DAILY=true \   # 是否每日轮转
+-e LOG_MAX_SIZE=100 \        # 单个日志文件最大大小(MB)
+-e LOG_MAX_BACKUPS=7 \       # 保留的旧日志文件数量
+-e LOG_MAX_AGE=30 \          # 日志文件保留天数
+```
+
+### 日志文件挂载
+
+为了确保告警日志不会因容器重启而丢失，建议将日志目录挂载到主机：
+
+```bash
+# 在docker run命令中添加日志目录挂载
+docker run -d --name dpanel \
+  -v /path/on/host/logs:/var/log/dpanel \
+  -e LOG_TO_FILE=true \
+  ... 其他参数 ... \
+  dpanel/dpanel:latest
+```
+
+在Docker Compose中配置：
+
+```yaml
+version: '3'
+
+services:
+  dpanel:
+    image: dpanel/dpanel:latest
+    container_name: dpanel
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dpanel-data:/dpanel
+      - ./logs:/var/log/dpanel    # 日志目录挂载
+    environment:
+      - LOG_TO_FILE=true
+      - LOG_FILE_PATH=/var/log/dpanel/alert.log
+      - LOG_ROTATE=true
+      - LOG_ROTATE_DAILY=true
+      - LOG_MAX_SIZE=100
+      - LOG_MAX_BACKUPS=7
+      - LOG_MAX_AGE=30
+      ... 其他配置 ...
+```
+
+### 通知错误分析
+
+当通知发送失败时，DPanel会自动分析错误原因并提供可能的解决方案：
+
+```bash
+# 查看通知错误详情和分析
+docker logs dpanel | grep "通知发送失败" -A 5
+```
+
+每种通知方式的常见错误及可能原因：
+
+**钉钉通知错误**:
+- 网络连接问题：检查网络连接或代理设置
+- Webhook地址无效：更新钉钉机器人配置
+- 签名验证失败：检查Secret配置
+- 发送频率限制：降低发送频率
+
+**邮件通知错误**:
+- 无法连接SMTP服务器：检查服务器地址和端口
+- SMTP认证失败：检查用户名和密码
+- SSL/TLS连接问题：检查EMAIL_USE_SSL设置
+- 邮箱地址无效：检查FROM和TO配置
+
+**飞书通知错误**:
+- 网络连接问题：检查网络连接或代理
+- Webhook地址或签名错误：检查配置
+- 发送频率超限：降低发送频率
+
+**企业微信通知错误**:
+- 网络连接问题：检查网络设置
+- Webhook地址无效：检查key参数
+- API调用频率限制：降低发送频率
+
 ---
 
 更多Docker和容器问题排查的详细信息，请参考[Docker官方文档](https://docs.docker.com/) 

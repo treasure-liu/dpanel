@@ -190,20 +190,47 @@ func handleContainerEvent(event events.Message) {
 	}
 
 	if shouldAlert && alertMsg != "" {
+		slog.Warn("检测到容器异常", 
+			"type", event.Action,
+			"container", containerName,
+			"id", containerId[:12],
+			"alertMsg", alertMsg)
+			
 		// 发送系统通知
 		_ = Message{}.Error("容器告警", alertMsg)
+		slog.Info("已发送系统通知", "container", containerName, "type", "系统通知")
 		
 		// 发送钉钉通知
-		_ = SendDingtalkMessage("容器告警", alertMsg, TypeError)
+		err := SendDingtalkMessage("容器告警", alertMsg, TypeError)
+		if err != nil {
+			analyzeAndLogError("钉钉", err, containerName, event.Action)
+		} else if GetDingtalkConfig().IsEnabled {
+			slog.Info("已发送告警通知", "container", containerName, "type", "钉钉")
+		}
 		
 		// 发送邮件通知
-		_ = SendEmailMessage("容器告警", alertMsg, TypeError)
+		err = SendEmailMessage("容器告警", alertMsg, TypeError)
+		if err != nil {
+			analyzeAndLogError("邮件", err, containerName, event.Action)
+		} else if GetEmailConfig().IsEnabled {
+			slog.Info("已发送告警通知", "container", containerName, "type", "邮件")
+		}
 		
 		// 发送飞书通知
-		_ = SendFeishuMessage("容器告警", alertMsg, TypeError)
+		err = SendFeishuMessage("容器告警", alertMsg, TypeError)
+		if err != nil {
+			analyzeAndLogError("飞书", err, containerName, event.Action)
+		} else if GetFeishuConfig().IsEnabled {
+			slog.Info("已发送告警通知", "container", containerName, "type", "飞书")
+		}
 		
 		// 发送企业微信通知
-		_ = SendWechatWorkMessage("容器告警", alertMsg, TypeError)
+		err = SendWechatWorkMessage("容器告警", alertMsg, TypeError)
+		if err != nil {
+			analyzeAndLogError("企业微信", err, containerName, event.Action)
+		} else if GetWechatWorkConfig().IsEnabled {
+			slog.Info("已发送告警通知", "container", containerName, "type", "企业微信")
+		}
 	}
 }
 
@@ -287,18 +314,104 @@ func checkContainersHealth() {
 			
 			// 发送系统通知
 			_ = Message{}.Error("容器健康告警", alertMsg)
+			slog.Info("已发送系统通知", "container", containerName, "type", "系统通知")
 			
 			// 发送钉钉通知
-			_ = SendDingtalkMessage("容器健康告警", alertMsg, TypeError)
+			err := SendDingtalkMessage("容器健康告警", alertMsg, TypeError)
+			if err != nil {
+				analyzeAndLogError("钉钉", err, containerName, "健康检查失败")
+			} else if GetDingtalkConfig().IsEnabled {
+				slog.Info("已发送告警通知", "container", containerName, "type", "钉钉")
+			}
 			
 			// 发送邮件通知
-			_ = SendEmailMessage("容器健康告警", alertMsg, TypeError)
+			err = SendEmailMessage("容器健康告警", alertMsg, TypeError)
+			if err != nil {
+				analyzeAndLogError("邮件", err, containerName, "健康检查失败")
+			} else if GetEmailConfig().IsEnabled {
+				slog.Info("已发送告警通知", "container", containerName, "type", "邮件")
+			}
 			
 			// 发送飞书通知
-			_ = SendFeishuMessage("容器健康告警", alertMsg, TypeError)
+			err = SendFeishuMessage("容器健康告警", alertMsg, TypeError)
+			if err != nil {
+				analyzeAndLogError("飞书", err, containerName, "健康检查失败")
+			} else if GetFeishuConfig().IsEnabled {
+				slog.Info("已发送告警通知", "container", containerName, "type", "飞书")
+			}
 			
 			// 发送企业微信通知
-			_ = SendWechatWorkMessage("容器健康告警", alertMsg, TypeError)
+			err = SendWechatWorkMessage("容器健康告警", alertMsg, TypeError)
+			if err != nil {
+				analyzeAndLogError("企业微信", err, containerName, "健康检查失败")
+			} else if GetWechatWorkConfig().IsEnabled {
+				slog.Info("已发送告警通知", "container", containerName, "type", "企业微信")
+			}
 		}
 	}
+}
+
+// analyzeAndLogError 分析通知发送错误并记录详细信息
+func analyzeAndLogError(noticeType string, err error, containerName string, eventType string) {
+	errMsg := err.Error()
+	
+	// 创建基本的错误日志
+	errLog := slog.ErrorAttrs(
+		noticeType+"通知发送失败",
+		slog.String("error", errMsg),
+		slog.String("container", containerName),
+		slog.String("event", eventType),
+	)
+	
+	// 根据不同通知类型和错误模式分析可能的原因
+	switch noticeType {
+	case "钉钉":
+		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
+			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+		} else if strings.Contains(errMsg, "401") || strings.Contains(errMsg, "unauthorized") {
+			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效或已过期，请更新钉钉机器人配置"))
+		} else if strings.Contains(errMsg, "sign") || strings.Contains(errMsg, "signature") {
+			errLog = append(errLog, slog.String("可能原因", "签名验证失败，请检查Secret配置是否正确"))
+		} else if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "too many requests") {
+			errLog = append(errLog, slog.String("可能原因", "发送频率超过钉钉限制，请降低发送频率"))
+		}
+		
+	case "邮件":
+		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
+			errLog = append(errLog, slog.String("可能原因", "无法连接到SMTP服务器，请检查服务器地址和端口"))
+		} else if strings.Contains(errMsg, "authentication failed") || strings.Contains(errMsg, "auth") {
+			errLog = append(errLog, slog.String("可能原因", "SMTP认证失败，请检查用户名和密码"))
+		} else if strings.Contains(errMsg, "tls") || strings.Contains(errMsg, "SSL") {
+			errLog = append(errLog, slog.String("可能原因", "SSL/TLS连接问题，请检查EMAIL_USE_SSL设置是否与服务器匹配"))
+		} else if strings.Contains(errMsg, "recipient") || strings.Contains(errMsg, "sender") {
+			errLog = append(errLog, slog.String("可能原因", "发件人或收件人地址无效，请检查EMAIL_FROM和EMAIL_TO配置"))
+		}
+		
+	case "飞书":
+		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
+			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+		} else if strings.Contains(errMsg, "sign") || strings.Contains(errMsg, "token") {
+			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效或签名错误，请检查配置"))
+		} else if strings.Contains(errMsg, "429") || strings.Contains(errMsg, "limit") {
+			errLog = append(errLog, slog.String("可能原因", "发送频率超过飞书限制，请降低发送频率"))
+		}
+		
+	case "企业微信":
+		if strings.Contains(errMsg, "connection refused") || strings.Contains(errMsg, "timeout") {
+			errLog = append(errLog, slog.String("可能原因", "网络连接问题，请检查网络连接或代理设置"))
+		} else if strings.Contains(errMsg, "40014") || strings.Contains(errMsg, "invalid") {
+			errLog = append(errLog, slog.String("可能原因", "Webhook地址无效，请检查key参数"))
+		} else if strings.Contains(errMsg, "45009") || strings.Contains(errMsg, "limit") {
+			errLog = append(errLog, slog.String("可能原因", "企业微信API调用频率限制，请降低发送频率"))
+		}
+	}
+	
+	// 记录详细的错误信息
+	slog.LogAttrs(context.Background(), slog.LevelError, noticeType+"通知发送失败", errLog...)
+	
+	// 记录调试提示
+	slog.Debug("通知发送问题排查建议", 
+		"type", noticeType,
+		"tip", "请检查"+noticeType+"配置，并确认相关服务运行正常",
+		"docker_cmd", "docker logs dpanel | grep \""+noticeType+"通知发送失败\"")
 } 
