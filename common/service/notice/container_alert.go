@@ -173,18 +173,60 @@ func handleContainerEvent(event events.Message) {
 		if config.AlertOnDie {
 			exitCode := event.Actor.Attributes["exitCode"]
 			if exitCode != "0" {
-				alertMsg = fmt.Sprintf("容器异常退出: %s (ID: %s)，退出码: %s", containerName, containerId[:12], exitCode)
+				// 获取镜像信息
+				imageName := event.Actor.Attributes["image"]
+				if imageName == "" {
+					// 尝试通过容器ID查询获取镜像信息
+					inspectData, err := docker.Sdk.Client.ContainerInspect(context.Background(), containerId)
+					if err == nil && inspectData.Config != nil {
+						imageName = inspectData.Config.Image
+					}
+				}
+				
+				if imageName != "" {
+					alertMsg = fmt.Sprintf("容器异常退出: %s (ID: %s)，镜像: %s，退出码: %s", containerName, containerId[:12], imageName, exitCode)
+				} else {
+					alertMsg = fmt.Sprintf("容器异常退出: %s (ID: %s)，退出码: %s", containerName, containerId[:12], exitCode)
+				}
 				shouldAlert = true
 			}
 		}
 	case "stop", "kill":
 		if config.AlertOnStop {
-			alertMsg = fmt.Sprintf("容器已停止: %s (ID: %s)", containerName, containerId[:12])
+			// 获取镜像信息
+			imageName := event.Actor.Attributes["image"]
+			if imageName == "" {
+				// 尝试通过容器ID查询获取镜像信息
+				inspectData, err := docker.Sdk.Client.ContainerInspect(context.Background(), containerId)
+				if err == nil && inspectData.Config != nil {
+					imageName = inspectData.Config.Image
+				}
+			}
+			
+			if imageName != "" {
+				alertMsg = fmt.Sprintf("容器已停止: %s (ID: %s)，镜像: %s", containerName, containerId[:12], imageName)
+			} else {
+				alertMsg = fmt.Sprintf("容器已停止: %s (ID: %s)", containerName, containerId[:12])
+			}
 			shouldAlert = true
 		}
 	case "oom":
 		if config.AlertOnOOM {
-			alertMsg = fmt.Sprintf("容器内存溢出(OOM): %s (ID: %s)", containerName, containerId[:12])
+			// 获取镜像信息
+			imageName := event.Actor.Attributes["image"]
+			if imageName == "" {
+				// 尝试通过容器ID查询获取镜像信息
+				inspectData, err := docker.Sdk.Client.ContainerInspect(context.Background(), containerId)
+				if err == nil && inspectData.Config != nil {
+					imageName = inspectData.Config.Image
+				}
+			}
+			
+			if imageName != "" {
+				alertMsg = fmt.Sprintf("容器内存溢出(OOM): %s (ID: %s)，镜像: %s", containerName, containerId[:12], imageName)
+			} else {
+				alertMsg = fmt.Sprintf("容器内存溢出(OOM): %s (ID: %s)", containerName, containerId[:12])
+			}
 			shouldAlert = true
 		}
 	}
@@ -304,7 +346,13 @@ func checkContainersHealth() {
 
 		// 检查健康状态
 		if inspectData.State.Health != nil && inspectData.State.Health.Status == "unhealthy" {
+			// 获取镜像信息
+			imageName := inspectData.Config.Image
+			
 			alertMsg := fmt.Sprintf("容器健康检查失败: %s (ID: %s)", containerName, containerId[:12])
+			if imageName != "" {
+				alertMsg = fmt.Sprintf("容器健康检查失败: %s (ID: %s)，镜像: %s", containerName, containerId[:12], imageName)
+			}
 			
 			// 添加最近的健康检查日志
 			if len(inspectData.State.Health.Log) > 0 {
